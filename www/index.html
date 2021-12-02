@@ -9,5 +9,149 @@
 </head>
 <body>
 
+<div id="wrapper">
+    <div id="start"></div>
+    <div id="message"></div>
+    <div id="board">
+        <div id="player_1" class="players">
+            <div class="score"></div>
+            <div class="hand"></div>
+        </div>
+        <div id="player_2_cpu" class="players">
+            <div class="score"></div>
+            <div class="hand"></div>
+        </div>
+        <div id="action">
+            <button id="btn-battle" type="button" class="btn">Battle!</button>
+        </div>
+    </div>
+</div>
+<script>
+    const game = {
+      edition: {
+        cardFace: ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"],
+        suits: ["spades", "hearts", "clubs", "diamonds"],
+        label: 'Classic Cards'
+      },
+      players: [[], []],
+      initDetails: {
+        baselineShuffle: {
+          maxRounds: Math.ceil(Math.random() * (8 - 3) + 3),
+          shufflesCompleted: false,
+          shuffledDeck: [],
+          currentShuffleRound: 0
+        }
+      },
+      liveDetails: {
+        playableDeck: [],
+        firstRun: true,
+        gameover: false,
+        hist: [],
+        pot: []
+      }
+    };
+
+    // Event Listeners For DOM Manipulation
+    let battleBtn = document.getElementById('btn-battle');
+    battleBtn.addEventListener('click', beginCardGame);
+
+    // Game Functions
+    function beginCardGame() {
+      if(game.liveDetails.firstRun) { // Need To Initialize The Game.
+        game.liveDetails.firstRun = false; // Set to false so that initialization can't be ran again.
+        buildDeck();
+        dealCardsToPlayers(game.liveDetails.playableDeck);
+        console.log('Game Has Been Initialized');
+      } else {
+        console.log('The Game Has Begun', game.players);
+        execAttackRound();
+      }
+    }
+    // ASYNC RECURSIVE FUNCTION SHUFFLE_DECK
+    async function shuffleDeck(deckOfCards) { // This is a recursively called function
+      for (let deckSize = deckOfCards.length - 1; deckSize > 0; deckSize -= 1) {
+        let randomCardId = Math.ceil(Math.random() * (deckSize + 1));
+
+        let containCard = deckOfCards[deckSize];
+
+        // Perform A Swap
+        deckOfCards[deckSize] = deckOfCards[randomCardId]
+        deckOfCards[randomCardId] = containCard;
+      }
+
+      if (!game.initDetails.baselineShuffle.shufflesCompleted) {
+        game.initDetails.baselineShuffle.shuffledDeck = deckOfCards;
+        game.initDetails.baselineShuffle.shufflesCompleted =
+          (game.initDetails.baselineShuffle.currentShuffleRound === game.initDetails.baselineShuffle.maxRounds);
+        game.initDetails.baselineShuffle.currentShuffleRound += 1;
+        await shuffleDeck(game.initDetails.baselineShuffle.shuffledDeck);
+      } else {
+        game.liveDetails.playableDeck = deckOfCards;
+      }
+    }
+    function buildDeck() {
+      for (let suit in game.edition.suits) {
+        let icon = (game.edition.suits[suit][0]).toUpperCase();
+        for (let selection in game.edition.cardFace) {
+          let card = {
+            suit: game.edition.suits[suit],
+            num: game.edition.cardFace[selection],
+            cardValue: parseInt(selection) + 2,
+            icon
+          }
+          game.initDetails.baselineShuffle.shuffledDeck.push(card);
+        }
+      }
+      shuffleDeck(game.initDetails.baselineShuffle.shuffledDeck);
+    }
+    function dealCardsToPlayers(deckOfCards) {
+      for (let card = 0; card < deckOfCards.length; card += 1 ) {
+        let randomlySelectedPlayer = card % 2;
+        game.players[randomlySelectedPlayer].push(deckOfCards[card]);
+      }
+    }
+
+    function endGame() {
+
+      const endgame = Object.freeze(game);
+      return 'END';
+    }
+
+
+    function execAttackRound() {
+        function showCard() {
+            console.log()
+        }
+
+        function initiateGameRound() {
+          let
+            player1_hand = document.querySelector("#player_1 .hand"),
+            player2_hand = document.querySelector("#player_2 .hand"),
+            pulledCardByPlayer1 = pullACard(0),
+            pulledCardByPlayer2 = pullACard(1),
+            currentRound = {
+                round: game.liveDetails.hist.length,
+                turnDraw: { pulledCardByPlayer1, pulledCardByPlayer2 }
+            };
+
+          game.liveDetails.hist.push(currentRound);
+          game.liveDetails.pot.push(currentRound.turnDraw);
+
+          player1_hand.innerHTML = showCard(pulledCardByPlayer1, 0);
+          player2_hand.innerHTML = showCard(pulledCardByPlayer2, 0);
+        }
+        function pullACard(playerId) {
+            return game.players[playerId].shift();
+        }
+
+        if (!game.liveDetails.gameover) {
+          return initiateGameRound();
+        } else {
+          return endGame();
+        }
+    }
+
+
+</script>
 </body>
 </html>
