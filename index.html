@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>War</title>
+    <link href="public/style/main.css" rel="stylesheet" type="text/css" />
+    <link href="public/style/mobile.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<main>
+    <div>
+        <div id="start">
+            <h1>Welcome To the Duneese Wars...</h1>
+        </div>
+        <div id="gameBoard" style="visibility: hidden;">
+            <div id="message">
+            </div>
+            <div id="board">
+                <div id="player_1" class="players">
+                    <p class="playerSpan">Player 1 <span class="p1Score score"></span></p>
+                    <div class="hand"></div>
+                </div>
+                <div id="player_2_cpu" class="players">
+                    <p class="playerSpan">CPU <span class="cpuScore score"></span></p>
+                    <div class="score"></div>
+                    <div class="hand cpu-hand"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<footer class="gameButtonPanel">
+    <div class="potActions">
+        <div style="margin: 15px; padding: 10px;">
+            <h4>Current Pot</h4>
+            <div class="potDetails">
+                <p>Total # Cards In Pot: <span id="totalPotCardCount"></span></p>
+                <p>Pot Value: <span id="totalPotValue"></span></p>
+            </div>
+        </div>
+        <button id="btn-acceptPot" class="btn" type="button" class="btn">
+            Accept The Pot
+        </button>
+        <button id="btn-declinePot" class="btn" type="button" class="btn">
+            Decline The Pot
+        </button>
+    </div>
+    <button id="btn-battle" class="btn" type="button" class="btn">
+        Begin A Game Of War!
+    </button>
+</footer>
+<div style="width: 85%; margin: 2.5rem auto;" class="rule-panel">
+    <h3>Game Logic</h3>
+    <h4 style="margin: 1rem; text-decoration: underline;">Details</h4>
+    <div>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Standard 52 Card Deck</p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">
+            Deck is shuffled randomly between 3-8 times prior to start. Then randomly divved to a user.
+        </p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">
+            Winning hands may either be cashed out or sent to the pot for a possible compounded return value.
+        </p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">
+            Game ends when a player runs out of cards.
+        </p>
+    </div>
+    <h4 style="margin: 1rem; text-decoration: underline;">Point System Tiers</h4>
+    <div>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 0 - Base Point Multiplier: 1x</p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 1 - Base Point Multiplier: 1.25x</p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 2 - Base Point Multiplier: 1.75x</p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 3 - Base Point Multiplier: 3.5x</p>
+    </div>
+    <h4 style="margin: 1rem; text-decoration: underline;">Tier Thresholds</h4>
+    <div>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 0 - Pot sits at less than four (4) cards.</p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 1 - Pot sits at five to eleven (5-11) cards.</p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 2 - Pot sits at twelve to fourteen (12 - 14) cards.</p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 3 - Pot sits at fifteen or more (15+) cards.</p>
+    </div>
+    <h4 style="margin: 1rem; text-decoration: underline;">CPU Cash-out Logic</h4>
+    <div>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 0 - CPU has a 1/8 or 13% chance To Cash In On The Pot</p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 1 - CPU has a 1/6 or 17% chance To Cash In On The Pot</p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 2 - CPU has a 1/4 or 25% chance To Cash In On The Pot</p>
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">Tier 3 - CPU has a 1/2 or 50% chance To Cash In On The Pot</p>
+        <hr />
+        <p style="margin-left: 2rem; padding-bottom: 1rem;">
+            When the CPU hand falls into the single digits, it will begin to play more aggressively by cashing out
+            at every opportunity in the effort to prevent an endgame. This behavior resets once the CPU hand clears
+            the single digit threshold.
+        </p>
+    </div>
+    <div>
+        Final Notes:
+        <p>
+            This game was inspired by a conversation about boredom between twitter friends.
+            All credit for photoshopping goes to Criticality (@fkthisall). Game Inspiration due to @Kinney01.
+        </p>
+    </div>
+</div>
+<script type="text/javascript" src="public/js/index.js"></script>
+</body>
+</html>
