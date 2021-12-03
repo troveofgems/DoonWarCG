@@ -223,8 +223,7 @@ btn:hover{
     #btn-battle,
     #btn-acceptPot,
     #btn-declinePot {
-        background-color: #acacac;
-        color: #000;
+        color: #fff;
         font-size: .75rem;
     }
 }
