@@ -1,7 +1,3 @@
-// Event Listeners For DOM Manipulation
-let battleBtn = document.getElementById('btn-battle');
-battleBtn.addEventListener('click', beginCardGame);
-
 const game = {
   edition: {
     cardFace: ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"],
@@ -20,6 +16,7 @@ const game = {
   },
   liveDetails: {
     playableDeck: [],
+    winnerOfGame: null,
     firstRun: true,
     gameover: false,
     hist: [],
@@ -56,6 +53,11 @@ const game = {
     }
   }
 };
+
+// Event Listeners For DOM Manipulation
+let battleBtn = document.getElementById('btn-battle');
+battleBtn.addEventListener('click', beginCardGame);
+
 // Pre-Runners
 function _connectEventListeners() {
   // Event Listeners For Pot Actions
@@ -112,6 +114,7 @@ function tabulateWinner() {
   }
 }
 function initiateGameRound() {
+  checkPlayerHands();
   let
     player1_hand = document.querySelector("#player_1 .hand"),
     player2_hand = document.querySelector("#player_2_cpu .cpu-hand"),
@@ -149,6 +152,22 @@ function routeWinner() {
     changeButtonView(true, false);
     _updatePotDetails();
     _updateGameboard("Congratulations! How would you like to handle your win?");
+  }
+}
+function checkPlayerHands(regularPlay = true) {
+  let
+    cardCountThreshold = regularPlay ? 0 : 4, // You need 4 cards per player when a draw occurs
+    player1HandCount = game.players[0].length,
+    cpuHandCount = game.players[1].length;
+
+  let bothPlayersCanContinue = (
+    player1HandCount > cardCountThreshold &&
+    cpuHandCount > cardCountThreshold
+  );
+
+  console.log(bothPlayersCanContinue);
+  if (!bothPlayersCanContinue) {
+    return endGame();
   }
 }
 
@@ -223,7 +242,7 @@ function acceptThePot(whoAccepts = 'player1') {
   let
     pid = whoAccepts === 'cpu' ? 1 : 0,
     acceptanceMessage = whoAccepts === 'cpu' ?
-      "CPU has decided to send the hand to the pot."
+      "CPU has decided to cash in on the pot."
       : "You have decided to cash in on the pot.",
     {rData: { turnDraw: { pulledCardByPlayer1, pulledCardByPlayer2 } }} = getCurrentRoundInformation();
 
@@ -266,9 +285,13 @@ function declineThePot(whoDeclines = 'player1') {
 }
 function increaseHand(pid) {
   // Add Cards From Pot To The Hand
-  let luckyNewHand = [].concat(game.players[pid]);
-  luckyNewHand = luckyNewHand.concat(game.liveDetails.pot);
-  game.players[pid] = luckyNewHand;
+  let
+    {rData: { turnDraw: { pulledCardByPlayer1, pulledCardByPlayer2 }}} = getCurrentRoundInformation(),
+    oldHand = game.players[pid],
+    potHand = game.liveDetails.pot,
+    plyHand = [pulledCardByPlayer1, pulledCardByPlayer2];
+
+  game.players[pid] = [].concat(oldHand, potHand, plyHand);
 
   return _flushPot();
 }
@@ -344,6 +367,11 @@ function _updateTier() {
 }
 function endGame() {
   game.liveDetails.gameover = true;
+  game.liveDetails.winnerOfGame =
+    game.liveDetails.scores.cpu > game.liveDetails.scores.player1 ? 'The CPU is' : 'You are';
+  changeButtonView(false, false);
   const endgame = Object.freeze(game);
-  return 'END';
+  console.log(endgame);
+  _updateGameboard(`${game.liveDetails.winnerOfGame} the winner of this game!`);
+  return endgame;
 }
