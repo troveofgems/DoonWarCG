@@ -56,72 +56,105 @@ const game = {
     }
   }
 };
+// Pre-Runners
+function _connectEventListeners() {
+  // Event Listeners For Pot Actions
+  let
+    acceptThePotBtn = document.getElementById('btn-acceptPot'),
+    declineThePotBtn = document.getElementById('btn-declinePot');
+
+  acceptThePotBtn.addEventListener('click', acceptThePot);
+  declineThePotBtn.addEventListener('click', declineThePot);
+}
 
 // Game Functions
 function beginCardGame() {
   if(game.liveDetails.firstRun) { // Need To Initialize The Game.
-    connectEventListeners();
-    let
-      gameBoard = document.getElementById('gameBoard'),
-      messagePanel = document.getElementById('message'),
-      p1ScoreInit = document.querySelector('.p1Score'),
-      p2ScoreInit = document.querySelector('.cpuScore');
-
-    gameBoard.style.visibility = 'visible';
-    messagePanel.innerHTML = 'Beginning Card Game';
-    p1ScoreInit.innerHTML = `- ${game.liveDetails.scores.player1}`;
-    p2ScoreInit.innerHTML = `- ${game.liveDetails.scores.cpu}`;
-
     game.liveDetails.firstRun = false; // Set to false so that initialization can't be ran again.
-
-    buildDeck(messagePanel);
-    dealCardsToPlayers(game.liveDetails.playableDeck);
+    _connectEventListeners();
+    _updateGameboard('Beginning Card Game');
+    _updateScores();
+    buildDeck();
+    dealCardsToPlayers(game.initDetails.baselineShuffle.shuffledDeck);
     console.log('Game Has Been Initialized');
   } else {
     console.log('The Game Has Begun', game.players);
     execAttackRound();
   }
 }
-function updateTier() {
-  const {potHist} = game.liveDetails;
-  game.liveDetails.potHist.holdoutCount += 1;
-  if (potHist.holdoutCount <= potHist.tier_0.limit) {
-    game.liveDetails.potHist.currentTier = 0;
-  } else if (potHist.holdoutCount >= potHist.tier_1.limit) {
-    game.liveDetails.potHist.currentTier = 1;
-  } else if (potHist.holdoutCount >= potHist.tier_2.limit) {
-    game.liveDetails.potHist.currentTier = 2;
-  } else if (potHist.holdoutCount >= potHist.tier_3.limit) {
-    game.liveDetails.potHist.currentTier = 3;
+function dealCardsToPlayers(deckOfCards) {
+  for (let card = 0; card < deckOfCards.length; card += 1 ) {
+    let randomlySelectedPlayer = card % 2;
+    game.players[randomlySelectedPlayer].push(deckOfCards[card]);
   }
 }
-async function shuffleDeck(deckOfCards, messagePanel) { // ASYNC RECURSIVE FUNCTION SHUFFLE_DECK
-  messagePanel.innerHTML = 'Shuffling Deck...';
-  for (let deckSize = deckOfCards.length - 1; deckSize > 0; deckSize -= 1) {
-    let randomCardId = Math.ceil(Math.random() * (deckSize + 1));
+function tabulateWinner() {
+  const {roundId, rData} = getCurrentRoundInformation();
+  if (rData.round === roundId) {
+    const
+      p1CardValue = rData.turnDraw.pulledCardByPlayer1.cardValue,
+      p2CardValue = rData.turnDraw.pulledCardByPlayer2.cardValue,
+      player1Wins = p1CardValue > p2CardValue,
+      player2Wins = p2CardValue > p1CardValue,
+      draw = p1CardValue === p2CardValue,
+      score_value = draw ? (p1CardValue + p2CardValue) : player1Wins ? p1CardValue : (p1CardValue + p2CardValue),
+      {turnDraw} = rData,
+      histolog = {
+        player1Wins, player2Wins, draw, score_value, turnDraw
+      };
 
-    let containCard = deckOfCards[deckSize];
-
-    // Perform A Swap
-    deckOfCards[deckSize] = deckOfCards[randomCardId]
-    deckOfCards[randomCardId] = containCard;
+    game.liveDetails.hist[roundId].histolog = histolog;
+    if (draw) {
+      // TODO: Handle Draws
+    } else {
+      return routeWinner();
+    }
   }
+}
+function initiateGameRound() {
+  let
+    player1_hand = document.querySelector("#player_1 .hand"),
+    player2_hand = document.querySelector("#player_2_cpu .cpu-hand"),
+    pulledCardByPlayer1 = pullACard(0),
+    pulledCardByPlayer2 = pullACard(1),
+    currentRound = {
+      round: game.liveDetails.hist.length,
+      turnDraw: { pulledCardByPlayer1, pulledCardByPlayer2 }
+    };
 
-  if (!game.initDetails.baselineShuffle.shufflesCompleted) {
-    game.initDetails.baselineShuffle.shuffledDeck = deckOfCards;
-    game.initDetails.baselineShuffle.shufflesCompleted =
-      (game.initDetails.baselineShuffle.currentShuffleRound === game.initDetails.baselineShuffle.maxRounds);
-    game.initDetails.baselineShuffle.currentShuffleRound += 1;
-    await shuffleDeck(game.initDetails.baselineShuffle.shuffledDeck, messagePanel);
+  game.liveDetails.hist.push(currentRound);
+
+  player1_hand.innerHTML = showCard(pulledCardByPlayer1, 0, 'p1CardSlot');
+  player2_hand.innerHTML = showCard(pulledCardByPlayer2, 0, 'p2CardSlot');
+
+  return tabulateWinner();
+}
+function execAttackRound() {
+  if (!game.liveDetails.gameover) {
+    return initiateGameRound();
   } else {
-    messagePanel.innerHTML = 'Tracking Scores & Loaded Final Deck...Click the button again to start the game';
-    let actionButton = document.getElementById('btn-battle');
-    actionButton.innerHTML = 'Dooneese Style War!!';
-    game.liveDetails.playableDeck = deckOfCards;
+    return endGame();
   }
 }
-function buildDeck(messagePanel) {
-  messagePanel.innerHTML = 'Building Deck...';
+function routeWinner() {
+  const {rData} = getCurrentRoundInformation();
+  if (rData.histolog.player2Wins) {
+    const cpuWantsToCashOut = letCPUDecideToCashout();
+    if (cpuWantsToCashOut) {
+      acceptThePot('cpu');
+    } else {
+      declineThePot('cpu');
+    }
+  } else if (rData.histolog.player1Wins) {
+    changeButtonView(true, false);
+    _updatePotDetails();
+    _updateGameboard("Congratulations! How would you like to handle your win?");
+  }
+}
+
+// Deck Actions
+function buildDeck() {
+  _updateGameboard('Building Deck...');
   for (let suit in game.edition.suits) {
     let icon = (game.edition.suits[suit][0]).toUpperCase();
     for (let selection in game.edition.cardFace) {
@@ -134,233 +167,183 @@ function buildDeck(messagePanel) {
       game.initDetails.baselineShuffle.shuffledDeck.push(card);
     }
   }
-  shuffleDeck(game.initDetails.baselineShuffle.shuffledDeck, messagePanel);
+  shuffleDeck(game.initDetails.baselineShuffle.shuffledDeck).then(() => {}).catch(err => console.error(err));
 }
-function dealCardsToPlayers(deckOfCards) {
-  for (let card = 0; card < deckOfCards.length; card += 1 ) {
-    let randomlySelectedPlayer = card % 2;
-    game.players[randomlySelectedPlayer].push(deckOfCards[card]);
+async function shuffleDeck(deckOfCards) { // ASYNC RECURSIVE FUNCTION SHUFFLE_DECK
+  _updateGameboard('Shuffling Deck...');
+  for (let deckSize = deckOfCards.length - 1; deckSize > 0; deckSize -= 1) {
+    let randomCardId = Math.ceil(Math.random() * (deckSize + 1));
+    let containCard = deckOfCards[deckSize];
+
+    // Perform A Swap
+    deckOfCards[deckSize] = deckOfCards[randomCardId]
+    deckOfCards[randomCardId] = containCard;
+  }
+
+  if (!game.initDetails.baselineShuffle.shufflesCompleted) {
+    game.initDetails.baselineShuffle.shuffledDeck = deckOfCards;
+    game.initDetails.baselineShuffle.shufflesCompleted =
+      (game.initDetails.baselineShuffle.currentShuffleRound === game.initDetails.baselineShuffle.maxRounds);
+    game.initDetails.baselineShuffle.currentShuffleRound += 1;
+    await shuffleDeck(game.initDetails.baselineShuffle.shuffledDeck);
+  } else {
+    _updateGameboard('Tracking Scores & Loaded Final Deck...Click the button again to start the game');
+    let actionButton = document.getElementById('btn-battle');
+    actionButton.innerHTML = 'Dooneese Style War!!';
+    game.liveDetails.playableDeck = deckOfCards;
   }
 }
-function connectEventListeners() {
-  // Event Listeners For Pot Actions
-  let
-    acceptThePotBtn = document.getElementById('btn-acceptPot'),
-    declineThePotBtn = document.getElementById('btn-declinePot');
 
-  acceptThePotBtn.addEventListener('click', acceptThePot);
-  declineThePotBtn.addEventListener('click', declineThePot);
+// Pot Actions
+function _updatePotDetails() {
+  const
+    totalCardsInPot = document.getElementById('totalPotCardCount'),
+    potValue = document.getElementById('totalPotValue');
+
+  totalCardsInPot.innerHTML = `${game.liveDetails.pot.length}`;
+  potValue.innerHTML = `${game.liveDetails.pot.reduce((sum, card) => sum + card.cardValue, 0)}`;
 }
-
-function acceptThePot() {
-  console.log('Calling Accept The Pot');
-  let
-    actionButton = document.getElementById('btn-battle'),
-    p1PotActions = document.querySelector('.potActions');
-
-  p1PotActions.style.visibility = 'hidden';
-  actionButton.style.visibility = 'visible'; // Action Decided
-
-  let
-    messagePanel = document.getElementById('message'),
-    roundId = game.liveDetails.hist.length - 1,
-    roundData = game.liveDetails.hist[roundId];
-  messagePanel.innerHTML = "You have decided to cash in on the pot.";
-
-  let
-    currentPotValue = game.liveDetails.pot.reduce((sum, card) => sum + card.cardValue, 0),
-    currentPlayedHandValue = (
-      roundData.turnDraw.pulledCardByPlayer1.cardValue +
-      roundData.turnDraw.pulledCardByPlayer2.cardValue
-    ),
-    { currentTier } = game.liveDetails.potHist,
-    multiplier = game.liveDetails.potHist[`tier_${currentTier}`].base;
-
-
-  console.log(roundData, currentPotValue, currentPlayedHandValue, game.liveDetails.scores.player1);
-  let test = currentPotValue + currentPlayedHandValue + game.liveDetails.scores.player1;
-  console.log('The Current Pot Value Is: ', currentPotValue);
-  console.log('The Current Hand Value Is: ', currentPlayedHandValue);
-  console.log('Player 1 Current Points: ', game.liveDetails.scores.player1);
-  console.log('Total Points ', test);
-  let
-    p1ScoreInit = document.querySelector('.p1Score'),
-    currentPlayerScore = game.liveDetails.scores.player1,
-    subtotalForPot = currentPotValue * multiplier,
-    subtotalForHand = currentPlayedHandValue,
-    totalCalculatedScore = subtotalForPot + subtotalForHand + currentPlayerScore;
-
-  game.liveDetails.scores.player1 = totalCalculatedScore;
-  p1ScoreInit.innerHTML = `- ${game.liveDetails.scores.player1}`;
-  // Add Cards To The Player's Hand
-  let newHand = [].concat(game.players[0]);
-  newHand = newHand.concat(game.liveDetails.pot);
-
+function _flushPot() {
   game.liveDetails.pot = []; // Reset The Pot
   game.liveDetails.potHist.holdoutCount = 0;
   game.liveDetails.potHist.currentTier = 0;
-  game.players[0] = newHand;
+
+  return null;
 }
-function declineThePot() {
+function changeButtonView(showPotButtons, showNextRoundButton) {
   let
     actionButton = document.getElementById('btn-battle'),
     p1PotActions = document.querySelector('.potActions');
 
-  p1PotActions.style.visibility = 'hidden';
-  actionButton.style.visibility = 'visible'; // Action Decided
+  p1PotActions.style.visibility = showPotButtons      ? 'visible' : 'hidden';
+  actionButton.style.visibility = showNextRoundButton ? 'visible' : 'hidden';
+}
+function acceptThePot(whoAccepts = 'player1') {
+  changeButtonView(false, true);
+  let
+    pid = whoAccepts === 'cpu' ? 1 : 0,
+    acceptanceMessage = whoAccepts === 'cpu' ?
+      "CPU has decided to send the hand to the pot."
+      : "You have decided to cash in on the pot.",
+    {rData: { turnDraw: { pulledCardByPlayer1, pulledCardByPlayer2 } }} = getCurrentRoundInformation();
+
+  _updateGameboard(acceptanceMessage);
 
   let
-    roundId = game.liveDetails.hist.length - 1,
-    roundData = game.liveDetails.hist[roundId];
+    { currentTier } = game.liveDetails.potHist,
+    multiplier = game.liveDetails.potHist[`tier_${currentTier}`].base,
+    score_totalHandValue = pulledCardByPlayer1.cardValue + pulledCardByPlayer2.cardValue,
+    score_totalPlayerValue = whoAccepts === 'cpu' ? (
+      game.liveDetails.scores.cpu
+    ) : (
+      game.liveDetails.scores.player1
+    ),
+    score_basePotScore = game.liveDetails.pot.reduce((sum, card) => sum + card.cardValue, 0),
+    score_totalPotScore = score_basePotScore * multiplier;
 
-  let // No Points are awarded as the cards instead go to the pot.
-    {pulledCardByPlayer1, pulledCardByPlayer2} = roundData.turnDraw,
-    messagePanel = document.getElementById('message'),
+  const finalScore = score_totalHandValue + score_totalPlayerValue + score_totalPotScore;
+  if (whoAccepts === 'cpu') {
+    game.liveDetails.scores.cpu = finalScore;
+  } else {
+    game.liveDetails.scores.player1 = finalScore;
+  }
+  increaseHand(pid); // Add Cards To The Player's Hand
+  _updateScores();
+}
+function declineThePot(whoDeclines = 'player1') {
+  changeButtonView(false, true);
+  let
+    declinationMessage = whoDeclines === 'cpu' ?
+      "CPU has decided to decline the pot."
+      : "You have decided to decline the pot.",
+    {rData: { turnDraw: { pulledCardByPlayer1, pulledCardByPlayer2 } }} = getCurrentRoundInformation(),
     playedHand = [pulledCardByPlayer1, pulledCardByPlayer2];
 
-  messagePanel.innerHTML = "You've declined the pot.";
+  _updateGameboard(declinationMessage);
   game.liveDetails.pot.push(...playedHand);
-  return updateTier();
+  _updateTier();
+  _updateScores();
+}
+function increaseHand(pid) {
+  // Add Cards From Pot To The Hand
+  let luckyNewHand = [].concat(game.players[pid]);
+  luckyNewHand = luckyNewHand.concat(game.liveDetails.pot);
+  game.players[pid] = luckyNewHand;
+
+  return _flushPot();
 }
 
-function endGame() {
+// Player Actions
+function pullACard(playerId) {
+  return game.players[playerId].shift();
+}
+function showCard(cardInPlay, position, cardOwner) {
+  let move = position * 40;
+  let cardSkeleton = `<div class="gameCard ${cardInPlay.suit} ${cardOwner}" style="left: ${move}px">`;
+  cardSkeleton += `<div class="cardTop suit">${cardInPlay.num}<br class="top-buffer"/></div>`;
+  cardSkeleton += `<div class="cardMiddle"></div>`;
+  cardSkeleton += `<div class="cardBottom suit">${cardInPlay.num}<br class="bottom-buffer"/></div></div>`;
+  return cardSkeleton;
+}
 
+// CPU Functions
+function letCPUDecideToCashout() {
+  let
+    cpuDecision = Math.random(), // Determine if the CPU will cash the pot.
+    { currentTier } = game.liveDetails.potHist,
+    chancesOfCPUCashingOut = game.liveDetails.potHist[`tier_${currentTier}`].cpuDesire,
+    cashout = cpuDecision < chancesOfCPUCashingOut,
+    instantCashout = game.players[1].length <= 7;
+
+  return cashout || instantCashout;
+}
+
+// Game Helper Functions
+function getCurrentRoundInformation() {
+  let
+    roundId = game.liveDetails.hist.length - 1,
+    rData = game.liveDetails.hist[roundId];
+  return {
+    roundId,
+    rData
+  };
+}
+function _updateGameboard(messageChange) {
+  let
+    gameBoard = document.getElementById('gameBoard'),
+    messagePanel = document.getElementById('message');
+
+  gameBoard.style.visibility = 'visible';
+  messagePanel.innerHTML = messageChange;
+
+  return null;
+}
+function _updateScores() {
+  let
+    p1ScoreInit = document.querySelector('.p1Score'),
+    p2ScoreInit = document.querySelector('.cpuScore');
+
+  p1ScoreInit.innerHTML = `- ${game.liveDetails.scores.player1}`;
+  p2ScoreInit.innerHTML = `- ${game.liveDetails.scores.cpu}`;
+
+  return null;
+}
+function _updateTier() {
+  const {potHist} = game.liveDetails;
+  game.liveDetails.potHist.holdoutCount += 1;
+  if (potHist.holdoutCount <= potHist.tier_0.limit) {
+    game.liveDetails.potHist.currentTier = 0;
+  } else if (potHist.holdoutCount >= potHist.tier_1.limit) {
+    game.liveDetails.potHist.currentTier = 1;
+  } else if (potHist.holdoutCount >= potHist.tier_2.limit) {
+    game.liveDetails.potHist.currentTier = 2;
+  } else if (potHist.holdoutCount >= potHist.tier_3.limit) {
+    game.liveDetails.potHist.currentTier = 3;
+  }
+  return null;
+}
+function endGame() {
+  game.liveDetails.gameover = true;
   const endgame = Object.freeze(game);
   return 'END';
-}
-
-function execAttackRound() {
-  function checkWinnerOfRound() {
-    let
-      roundId = game.liveDetails.hist.length - 1,
-      roundData = game.liveDetails.hist[roundId];
-    if (roundData.round === roundId) {
-      const
-        p1CardValue = roundData.turnDraw.pulledCardByPlayer1.cardValue,
-        p2CardValue = roundData.turnDraw.pulledCardByPlayer2.cardValue,
-        player1Wins = p1CardValue > p2CardValue,
-        player2Wins = p2CardValue > p1CardValue,
-        draw = p1CardValue === p2CardValue,
-        score_value = draw ? (p1CardValue + p2CardValue) : player1Wins ? p1CardValue : (p1CardValue + p2CardValue),
-        {turnDraw} = roundData,
-        histolog = {
-          player1Wins, player2Wins, draw, score_value, turnDraw
-        };
-
-      game.liveDetails.hist[roundId].histolog = histolog;
-      if (draw) {
-        // TODO: Handle Draws
-      } else {
-        return calculateScore(histolog);
-      }
-    }
-  }
-
-
-
-  function calculateScore(histolog) {
-    let
-      messagePanel = document.getElementById('message'),
-      totalCardCountInPot = document.getElementById('totalPotCardCount'),
-      totalPotValue = document.getElementById('totalPotValue'),
-      p1PotActions = document.querySelector('.potActions');
-
-
-
-
-    if (histolog.player2Wins) {
-      let
-        cpuDecision = Math.random(), // Determine if the CPU will cash the pot.
-        { currentTier } = game.liveDetails.potHist,
-        chancesOfCPUCashingOut = game.liveDetails.potHist[`tier_${currentTier}`].cpuDesire;
-
-      if (cpuDecision < chancesOfCPUCashingOut || game.players[1].length === 1) {
-        messagePanel.innerHTML = "CPU has decided to cash in on the pot.";
-        let
-          currentPotValue = game.liveDetails.pot.reduce((sum, card) => sum + card.cardValue, 0),
-          { currentTier } = game.liveDetails.potHist,
-          multiplier = game.liveDetails.potHist[`tier_${currentTier}`].base;
-
-        let p2ScoreInit = document.querySelector('.cpuScore');
-
-        game.liveDetails.scores.cpu = currentPotValue * multiplier;
-        p2ScoreInit.innerHTML = `- ${game.liveDetails.scores.cpu}`;
-        // Add Cards To The CPU's Hand
-        let newHand = [].concat(game.players[1]);
-        newHand = newHand.concat(game.liveDetails.pot);
-
-        game.liveDetails.pot = []; // Reset The Pot
-        game.liveDetails.potHist.holdoutCount = 0;
-        game.liveDetails.potHist.currentTier = 0;
-        game.players[1] = newHand;
-      } else {
-        let // No Points are awarded as the cards instead go to the pot.
-          {pulledCardByPlayer1, pulledCardByPlayer2} = histolog.turnDraw,
-          playedHand = [pulledCardByPlayer1, pulledCardByPlayer2];
-
-        messagePanel.innerHTML = "CPU has decided to send the hand to the pot.";
-        game.liveDetails.pot.push(...playedHand);
-        updateTier();
-      }
-    }
-
-
-    else if (histolog.player1Wins) {
-      let actionButton = document.getElementById('btn-battle');
-      actionButton.style.visibility = 'hidden'; // Disable Next Round Until Player Decides Pot
-
-      const
-        currentPotValue = game.liveDetails.pot.reduce((sum, card) => sum + card.cardValue, 0),
-        { currentTier } = game.liveDetails.potHist,
-        multiplier = game.liveDetails.potHist[`tier_${currentTier}`].base;
-
-      messagePanel.innerHTML = "Congratulations! How would you like to handle your win?";
-      totalCardCountInPot.innerHTML = `${game.liveDetails.pot.length}`;
-      totalPotValue.innerHTML = `${currentPotValue * multiplier}`;
-      p1PotActions.style.visibility = 'visible';
-    }
-  }
-
-
-
-
-
-
-
-  function showCard(cardInPlay, position, cardOwner) {
-    let move = position * 40;
-    let cardSkeleton = `<div class="gameCard ${cardInPlay.suit} ${cardOwner}" style="left: ${move}px">`;
-    cardSkeleton += `<div class="cardTop suit">${cardInPlay.num}<br class="top-buffer"/></div>`;
-    cardSkeleton += `<div class="cardMiddle"></div>`;
-    cardSkeleton += `<div class="cardBottom suit">${cardInPlay.num}<br class="bottom-buffer"/></div></div>`;
-    return cardSkeleton;
-  }
-  function initiateGameRound() {
-    let
-      player1_hand = document.querySelector("#player_1 .hand"),
-      player2_hand = document.querySelector("#player_2_cpu .cpu-hand"),
-      pulledCardByPlayer1 = pullACard(0),
-      pulledCardByPlayer2 = pullACard(1),
-      currentRound = {
-        round: game.liveDetails.hist.length,
-        turnDraw: { pulledCardByPlayer1, pulledCardByPlayer2 }
-      };
-
-
-    game.liveDetails.hist.push(currentRound);
-
-    player1_hand.innerHTML = showCard(pulledCardByPlayer1, 0, 'p1CardSlot');
-    player2_hand.innerHTML = showCard(pulledCardByPlayer2, 0, 'p2CardSlot');
-    checkWinnerOfRound();
-  }
-  function pullACard(playerId) {
-    return game.players[playerId].shift();
-  }
-
-  if (!game.liveDetails.gameover) {
-    return initiateGameRound();
-  }
-  else {
-    return endGame();
-  }
 }
