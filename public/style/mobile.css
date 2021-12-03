@@ -24,4 +24,11 @@
     .cardMiddle {
         height: unset;
     }
+    .btn-battle,
+    .btn-acceptPot,
+    .btn-declinePot {
+        background-color: #acacac;
+        color: #000;
+        font-size: .75rem;
+    }
 }
