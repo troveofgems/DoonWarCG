@@ -1,4 +1,4 @@
- @media (min-width:320px) {
+ @media (min-height:400px) {
     h1 {
         font-size: 1.25rem;
         color: red;
