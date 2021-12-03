@@ -191,3 +191,40 @@ btn:hover{
 .p2CardSlot {
     position: relative;
 }
+
+@media only screen 
+    and (min-width: 500px) {
+    h1 {
+        font-size: 1.25rem;
+        color: red;
+    }
+    #message {
+        font-size: 1rem;
+        margin: .5rem auto;
+        width: 85%;
+    }
+    .players {
+        min-height: 150px;
+    }
+    .playerSpan {
+        font-size: 1rem;
+    }
+    .gameCard {
+        height: 100px;
+        width: 75px;
+    }
+    .cardTop,
+    .cardBottom {
+        font-size: 1rem!important;
+    }
+    .cardMiddle {
+        height: unset;
+    }
+    .btn-battle,
+    .btn-acceptPot,
+    .btn-declinePot {
+        background-color: #acacac;
+        color: #000;
+        font-size: .75rem;
+    }
+}
